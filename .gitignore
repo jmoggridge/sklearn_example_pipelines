@@ -37,3 +37,8 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# cancer outputs
+cancer-folded-*
+abalone-folded-*
+*-train-vs-test*
