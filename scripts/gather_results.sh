@@ -21,17 +21,33 @@ echo $header > abalone_5foldresults.csv
 echo $header > cancer_5fold_results.csv
 echo $header > diabetes_5fold_results.csv
 
+echo "\n\n"
+echo "Abalone"
+echo "--------------"
+echo $header
+
 for result in ./results/abalone-folded*.csv
 do
+  cat $result
   cat $result >> abalone_5fold_results.csv
 done
 
+echo "\n\n"
+echo "Cancer"
+echo "--------------"
+echo $header
 for result in ./results/cancer-folded*.csv
 do
+  cat $result
   cat $result >> cancer_5fold_results.csv
 done
 
+echo "\n\n"
+echo "Diabetes"
+echo "--------------"
+echo $header
 for result in ./results/diabetes-folded*.csv
 do
+  cat $result
   cat $result >> diabetes_5fold_results.csv
 done

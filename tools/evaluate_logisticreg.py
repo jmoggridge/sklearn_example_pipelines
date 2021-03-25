@@ -48,7 +48,7 @@ else:
     CLASS_NAMES = args.classes.split(',')
 ## set the seed if given for reproducible runs
 if args.seed is not None:
-    random.seed(argparse.seed)
+    random.seed(args.seed)
 MAKE_FIG=args.fig
 DATA_DIRNAME=args.dirname
 
@@ -80,7 +80,7 @@ y_test = np.ravel(y_test.to_numpy())
 # Set up the list of values to search among
 logreg_parameters = [
         {'penalty' : ['l1', 'l2'],
-        'C' : np.logspace(-4, 4, 100),
+        'C' : np.logspace(-3, 2, 20),
         'solver' : ['liblinear']},
         ]
 
@@ -140,6 +140,15 @@ else:
 print('Log. reg. Performance metrics:  accuracy %.2f, precision %.2f, recall %.2f, f1 %.2f'
         % (prediction_accuracy, prediction_precision, prediction_recall, prediction_fmeasure))
 
+performance = pd.DataFrame()
+performance['algortithm'] = ['SVC']
+performance['precision'] = [prediction_precision]
+performance['accuracy'] = [prediction_accuracy]
+performance['recall'] = [prediction_recall]
+performance['fmeasure'] = [prediction_fmeasure]
+performance.to_csv('%s/logreg_performance.csv' % DATA_DIRNAME, header=False, index=False)
+print(performance)
+
 outcome = pd.DataFrame()
 outcome['predicted'] = y_pred
 outcome['actual'] = y_test
@@ -156,3 +165,4 @@ if MAKE_FIG:
             '%s/logreg_confusion_heatmap.pdf' % DATA_DIRNAME,
             cm, CLASS_NAMES, y_training)
         
+# 

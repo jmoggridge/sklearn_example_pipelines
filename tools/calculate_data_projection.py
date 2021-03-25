@@ -215,7 +215,7 @@ MAKE_PCA_FIG = args.fig
 
 ## set the seed if given for reproducible runs
 if args.seed is not None:
-    random.seed(argparse.seed)
+    random.seed(args.seed)
 
 DATA_DIRNAME=args.dirname
 
