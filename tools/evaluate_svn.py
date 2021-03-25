@@ -1,29 +1,22 @@
 #!/usr/bin/env python3
 
 '''
-Standardize the data based on training and apply PCA
+Evaluate SVN model and return confusion matrix and performance metrics
 '''
 
 import sys
 import argparse
 import pathlib
 import math
-
 import confusion
-
 import pandas as pd
 import numpy as np
-
 import random
-
 from sklearn.model_selection import GridSearchCV
 from sklearn.svm import SVC
 from sklearn import metrics
-
 import matplotlib.pyplot as plt
 import seaborn as sns
-
-
 
 ## get values from command line if given
 argparser = argparse.ArgumentParser(
@@ -45,21 +38,18 @@ argparser.add_argument("dirname",
 
 args = argparser.parse_args(sys.argv[1:])
 
-
 if args.classes is None:
     CLASS_NAMES = None
 else:
     CLASS_NAMES = args.classes.split(',')
-
 ## set the seed if given for reproducible runs
 if args.seed is not None:
     random.seed(argparse.seed)
 
 MAKE_FIG=args.fig
 DATA_DIRNAME=args.dirname
+print(f'DATA_DIRNAME is {DATA_DIRNAME}')
 
-
-print(" . Loading....")
 X_training = pd.read_csv("%s/X_proj_train.csv" % DATA_DIRNAME)
 X_validation = pd.read_csv("%s/X_proj_validation.csv" % DATA_DIRNAME)
 X_test = pd.read_csv("%s/X_proj_test.csv" % DATA_DIRNAME)
@@ -68,9 +58,7 @@ y_training = pd.read_csv("%s/y_train.csv" % DATA_DIRNAME)
 y_validation = pd.read_csv("%s/y_validation.csv" % DATA_DIRNAME)
 y_test = pd.read_csv("%s/y_test.csv" % DATA_DIRNAME)
 
-
 ## need to convert X to numpy arrays and y to a column vector
-
 X_training = X_training.to_numpy()
 X_validation = X_validation.to_numpy()
 X_test = X_test.to_numpy()
@@ -80,14 +68,7 @@ y_training = np.ravel(y_training.to_numpy())
 y_validation = np.ravel(y_validation.to_numpy())
 y_test = np.ravel(y_test.to_numpy())
 
-
-
-
-##
-## Use "grid search" to find good values for our SVC for this
-## training set.
-##
-
+## Use "grid search" to find good values for our SVC for this training set
 # Set up the list of values to search among
 parameters = [
         {'C': [1, 10, 100, 1000], 'kernel': ['linear']},
@@ -95,7 +76,6 @@ parameters = [
                 'gamma': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]}]
 
 # perform the search
-print(" . Performing grid search")
 svc_search = GridSearchCV(
             SVC(),      # estimator object
             parameters, # parameters to search among
@@ -103,13 +83,9 @@ svc_search = GridSearchCV(
             verbose=1)  # give a message indicating setup
 svc_search.fit(X_validation, y_validation)
 
-
 best_parameters = svc_search.best_params_
 print(" . Best parameters found for SVN:", best_parameters)
 
-
-
-print(" . Creating SVC model to use on training data")
 # Here the "**" means that we take the list of keyword=arg
 # values in best_parameters and convert it into a dictionary
 # to pass as arguments to the creation of the SVC implementation
@@ -122,19 +98,12 @@ model = SVC(**best_parameters)
 model.fit(X_training, y_training)
 
 
-
-##
 ## Evaluate the results
-##
-print(" . Performing evaluation:")
-
 
 # Make some predictions on the test data -- this generates
 # a set of new labels, which should match the test labels
 # if our classifier is a strong one
 y_pred = model.predict(X_test)
-
-
 
 # If these labels are correct, they will match the ones in y_test
 prediction_accuracy = metrics.accuracy_score(y_test, y_pred)
@@ -143,22 +112,30 @@ unique_labels = np.unique(y_training)
 if len(unique_labels) <= 2:
 	prediction_precision = metrics.precision_score(y_test, y_pred)
 	prediction_recall = metrics.recall_score(y_test, y_pred)
+	prediction_fmeasure = metrics.f1_score(y_test, y_pred)
 else:
 	prediction_precision = metrics.precision_score(y_test, y_pred,
 			average="macro")
 	prediction_recall = metrics.recall_score(y_test, y_pred,
 			average="macro")
+	prediction_fmeasure = metrics.f1_score(y_test, y_pred,
+			average="macro")
 
-print('Performance metrics:  accuracy %.2f, precision %.2f, recall %.2f'
-        % (prediction_accuracy, prediction_precision, prediction_recall))
+print('SVN Performance metrics:  accuracy %.2f, precision %.2f, recall %.2f, f1 %.2f'
+        % (prediction_accuracy, prediction_precision, prediction_recall, prediction_fmeasure))
 
+performance = pd.DataFrame()
+performance['algortithm'] = 'SVC'
+performance['precision'] = prediction_precision
+performance['accuracy'] = prediction_accuracy
+performance['recall'] = prediction_recall
+performance['fmeasure'] = prediction_fmeasure
+performance.to_csv('%s/svn_outcome.csv' % DATA_DIRNAME, index=False)
 
 outcome = pd.DataFrame()
 outcome['predicted'] = y_pred
 outcome['actual'] = y_test
-
 outcome.to_csv('%s/svn_outcome.csv' % DATA_DIRNAME, index=False)
-
 
 # Calculate confusion matrix and print it
 cm = metrics.confusion_matrix(y_test, y_pred)

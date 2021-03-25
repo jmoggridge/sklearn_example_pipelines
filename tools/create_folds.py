@@ -56,7 +56,7 @@ args = argparser.parse_args(sys.argv[1:])
 
 ## set the seed if given for reproducible runs
 if args.seed is not None:
-    random.seed(argparse.seed)
+    random.seed(args.seed)
 
 if args.label is None:
 	LABEL=None
