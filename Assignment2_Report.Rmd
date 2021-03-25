@@ -1,17 +1,19 @@
 ---
-title: "Assignment2_report"
+title: "CIS6060 Assignment 2: Performance of Logistic Regression and Support Vector Machines Classifiers on Three Datasets"
 author: "J Moggridge"
 date: "25/03/2021"
 output: pdf_document
 ---
 
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 
-```{r}
+```{r tidy_data}
 library(tidyverse)
 library(ggbeeswarm)
+library(glue)
 
 # combine all data to work with
 df <- 
@@ -31,7 +33,7 @@ df <-
 ```
 
 
-```{r}
+```{r summary_t.test}
 # compute performance metric means for each (algorithm, dataset) pair
 summary_df <- df %>% 
   group_by(algorithm, data, metric) %>% 
@@ -56,16 +58,23 @@ pairs_df <- summary_df %>%
   select(everything(), t_test, -contains("values_"))
 ```
 
-
-```{r}
-# none are significant
-pairs_df %>%
-  select(data, metric, contains('LogReg'), contains('SVC'), p_value) %>%
-  pander::pander()
-```
+---
 
 
-```{r, fig.height=4, fig.width=5}
+*I chose to add the popular Pima Indians diabetes dataset to the pipeline (https://www.kaggle.com/uciml/pima-indians-diabetes-database). These data were previously obtained and additional features were generated in R using an existing script (make_diabetes_data.R).*
+
+
+# Results
+
+The performance of logistic regression and support vector machine classifiers were compared for three datasets: abalone (n = 4177, 7 variables, 3 classes); cancer (n = 79, 7129 genes, binary outcome, PCA transform was applied); and the Pima Indians diabetes dataset with interaction and quadratic terms (n = 768, 45 predictors, binary outcome). Performance metrics of interest (accuracy, precision, recall, and f1 score) were collected for hypothesis testing by paired t-tests .
+
+Overall, I found that the support vector machine classifier performed slightly better across datasets and metrics than the logistic regression classifier, however these differences only approached significance at the p<0.05 level (fig 1., table 1). 
+
+Perhaps if 10-fold cross validation were performed, the sample size would allow for lower-error estimates of performance, but the cancer datasets is of very small size, making 10-fold cross-validation unfeasible.
+
+
+
+```{r plot1, fig.height=4, fig.width=5, fig.cap="Performance metrics (accuracy, f1, precision, and recall) in 5-fold cross-validation of logistic regression and support vector classifiers for Abalone, Cancer, and Diabetes datasets. Means +/- sd are shown as black point and errorbars, with individual observations are shown as grey circles. Note that different scales are used for each dataset."}
 
 ggplot() +
  geom_quasirandom(
@@ -100,3 +109,22 @@ ggplot() +
   
 ```
 
+
+
+
+
+
+----
+
+```{r table1}
+# none are significant
+pairs_df %>%
+  select(data, metric, contains('LogReg'), contains('SVC'), p_value) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  mutate(`Logistic Regression` = glue("{mean_LogReg} ({sd_LogReg})"),
+         SVM = glue("{mean_SVC} ({sd_SVC})")) %>% 
+  select(-contains("mean"), -contains("sd")) %>% 
+  rename(Dataset = data, Metric = metric) %>% 
+  relocate(p_value,.after = everything()) %>% 
+  pander::pander(caption = "Estimates of performance from 5-fold cross-validation of logistic regression and SVM classifiers applied to 3 datasets. Data are expressed as 'means (standard deviation)'")
+```
