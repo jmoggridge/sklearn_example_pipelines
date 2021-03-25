@@ -125,9 +125,9 @@ print('SVN Performance metrics:  accuracy %.2f, precision %.2f, recall %.2f, f1 
         % (prediction_accuracy, prediction_precision, prediction_recall, prediction_fmeasure))
 
 performance = pd.DataFrame()
-performance['algortithm'] = ['SVC']
-performance['precision'] = [prediction_precision]
+performance['algortithm'] = ['SVM']
 performance['accuracy'] = [prediction_accuracy]
+performance['precision'] = [prediction_precision]
 performance['recall'] = [prediction_recall]
 performance['fmeasure'] = [prediction_fmeasure]
 

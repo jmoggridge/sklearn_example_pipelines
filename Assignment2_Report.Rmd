@@ -5,7 +5,6 @@ date: "25/03/2021"
 output: pdf_document
 ---
 
-
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
@@ -15,77 +14,96 @@ library(tidyverse)
 library(ggbeeswarm)
 library(glue)
 
+# test-train results
+clnames <- c("Classifier","Accuracy", "Precision", "Recall", "F1") 
+test_train_df <- bind_rows(
+  read_csv('./abalone-train-vs-test/logreg_performance.csv',
+           col_names = clnames) %>%
+    mutate(data = "Abalone"),
+  read_csv('./abalone-train-vs-test/svn_performance.csv', 
+           col_names = clnames) %>%
+    mutate(data = "Abalone"),
+  read_csv('./cancer-train-vs-test/logreg_performance.csv',
+           col_names = clnames) %>%
+    mutate(data = "Cancer"),
+  read_csv('./cancer-train-vs-test/svn_performance.csv', 
+           col_names = clnames) %>%
+    mutate(data = "Cancer"),
+   read_csv('./diabetes-train-vs-test/logreg_performance.csv',
+           col_names = clnames) %>%
+    mutate(data = "Diabetes"),
+  read_csv('./diabetes-train-vs-test/svn_performance.csv', 
+           col_names = clnames) %>%
+    mutate(data = "Diabetes")
+  ) %>% 
+  relocate(data) %>% 
+  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
+  mutate(Classifier = ifelse(Classifier == "SVC", "SVM", Classifier))
+
 # combine all data to work with
-df <- 
-  bind_rows(
-    read_csv("./results/kfold_abalone.csv", skip = 1L) %>% 
-      mutate(data = "Abalone"),
-    read_csv("./results/kfold_cancer.csv") %>% 
-      mutate(data = "Cancer"),
-    read_csv("./results/kfold_diabetes.csv") %>% 
-      mutate(data = "Diabetes")
-  ) %>%
+five_fold_df <- bind_rows(
+  read_csv("./results/kfold_abalone.csv", skip = 1L) %>% 
+    mutate(data = "Abalone"),
+  read_csv("./results/kfold_cancer.csv") %>% 
+    mutate(data = "Cancer"),
+  read_csv("./results/kfold_diabetes.csv") %>% 
+    mutate(data = "Diabetes")
+) %>%
   mutate(algorithm = ifelse(algorithm == "Logistic regression", 
                             "LogReg", algorithm)) %>% 
   pivot_longer(precision:f1, 
                names_to = 'metric', 
                values_to = 'value')
-```
 
-
-```{r summary_t.test}
 # compute performance metric means for each (algorithm, dataset) pair
-summary_df <- df %>% 
+summary_df <- five_fold_df %>% 
   group_by(algorithm, data, metric) %>% 
   summarize(values = list(value),
             mean = mean(value), 
             sd = sd(value))
-# view(summary_df)
-
-paired_t_test <- function(x,y) 
-  t.test(as.vector(x), as.vector(y), paired=T)
-
-# pivot data such that each row has (data, metric, values_SVC, values_LogReg)
-pairs_df <- summary_df %>% 
-  mutate(id = row_number()) %>% 
-  pivot_wider(id_cols = c(data, metric), 
-              names_from = algorithm, 
-              values_from = c(values, mean, sd)) %>% 
-  # do a paired t-test for each dataset & metric
-  mutate(t_test = map2(values_LogReg, values_SVC, paired_t_test)) %>% 
-  mutate(p_value = map_dbl(t_test, "p.value"),
-         mean_diff = map_dbl(t_test, "estimate")) %>% 
-  select(everything(), t_test, -contains("values_"))
 ```
 
----
+```{r ttests}
+# paired t-test from two vectors
+paired_t_test <- function(x,y) t.test(unlist(x), unlist(y), paired=T)
+
+# pivot data such that each row has (data, metric, values_SVM, values_LogReg)
+pairs_df <- summary_df %>% 
+  pivot_wider(id_cols = c(data, metric), 
+              names_from = algorithm, 
+              values_from = c(values, mean, sd))  %>% 
+  # do a paired t-test for each dataset & metric
+  mutate(t_test = map2(values_LogReg, values_SVM, ~ paired_t_test(.x, .y))) %>% 
+  mutate(p_value = map_dbl(t_test, "p.value"),
+         mean_diff = map_dbl(t_test, "estimate")) %>% 
+  select(everything(), t_test)
+
+# Arrange table2 for presentation
+table2 <- pairs_df %>%
+  select(-contains("values_")) %>% 
+  select(data, metric, contains('LogReg'), contains('SVM'), p_value) %>%
+  mutate(across(where(is.numeric), ~ round(.x, 3))) %>% 
+  mutate(`Logistic Regression` = glue("{mean_LogReg} ({sd_LogReg})"),
+         SVM = glue("{mean_SVM} ({sd_SVM})")) %>% 
+  select(-contains("mean"), -contains("sd")) %>% 
+  rename(Dataset = data, Metric = metric) %>% 
+  relocate(p_value,.after = everything()) %>% 
+  mutate(`sig` = ifelse(p_value < 0.05, '*', ''))
+```
 
 
-*I chose to add the popular Pima Indians diabetes dataset to the pipeline (https://www.kaggle.com/uciml/pima-indians-diabetes-database). These data were previously obtained and additional features were generated in R using an existing script (make_diabetes_data.R).*
+```{r the_one_plot}
 
-
-# Results
-
-The performance of logistic regression and support vector machine classifiers were compared for three datasets: abalone (n = 4177, 7 variables, 3 classes); cancer (n = 79, 7129 genes, binary outcome, PCA transform was applied); and the Pima Indians diabetes dataset with interaction and quadratic terms (n = 768, 45 predictors, binary outcome). Performance metrics of interest (accuracy, precision, recall, and f1 score) were collected for hypothesis testing by paired t-tests .
-
-Overall, I found that the support vector machine classifier performed slightly better across datasets and metrics than the logistic regression classifier, however these differences only approached significance at the p<0.05 level (fig 1., table 1). 
-
-Perhaps if 10-fold cross validation were performed, the sample size would allow for lower-error estimates of performance, but the cancer datasets is of very small size, making 10-fold cross-validation unfeasible.
-
-
-
-```{r plot1, fig.height=4, fig.width=5, fig.cap="Performance metrics (accuracy, f1, precision, and recall) in 5-fold cross-validation of logistic regression and support vector classifiers for Abalone, Cancer, and Diabetes datasets. Means +/- sd are shown as black point and errorbars, with individual observations are shown as grey circles. Note that different scales are used for each dataset."}
-
-ggplot() +
- geom_quasirandom(
-   data=df, 
-   aes(x = algorithm, y = value), 
-   groupOnX = T,
-   width = 0.25, 
-   color = 'darkgray',
-   shape = 1,
-   alpha = 0.9,
-   method = 'quasirandom') +
+plot1 <- 
+  ggplot() +
+  geom_jitter(
+    data = five_fold_df, 
+    aes(x = algorithm, y = value),
+    width = 0.25, 
+    color = 'darkgray',
+    shape = 1,
+    alpha = 0.9,
+    method = 'quasirandom') +
   geom_point(
     data=summary_df, 
     aes(x = algorithm, y = mean),
@@ -105,45 +123,100 @@ ggplot() +
     panel.grid.major.x = element_blank(),
     panel.grid.minor.x = element_blank(),
     panel.grid.minor.y = element_blank(),
-    )
-  
-```
-
-
-```{r}
-# test-train results
-clnames <- c("Classifier","Accuracy", "Precision", "Recall", "F1") 
-test_train_df <- bind_rows(
-  read_csv('./cancer-train-vs-test/logreg_performance.csv',
-           col_names = clnames) %>%
-    mutate(data = "Cancer"),
-  read_csv('./cancer-train-vs-test/svn_performance.csv', 
-           col_names = clnames) %>%
-    mutate(data = "Cancer"),
-  read_csv('./abalone-train-vs-test/logreg_performance.csv',
-           col_names = clnames) %>%
-    mutate(data = "Abalone"),
-  read_csv('./abalone-train-vs-test/svn_performance.csv', 
-           col_names = clnames) %>%
-    mutate(data = "Abalone")
   )
-
 ```
 
 
+*I chose to add the popular Pima Indians diabetes dataset to the pipeline (https://www.kaggle.com/uciml/pima-indians-diabetes-database). These data were previously obtained and additional features were generated in R using an existing script (make_diabetes_data.R).*
 
+
+---
+
+## Results
+
+The performance of logistic regression and support vector machines (SVM) classifiers were compared for three datasets: abalone (n = 4177, 7 variables, 3 classes); cancer (n = 79, 7129 genes, binary outcome, PCA transform was applied); and the Pima Indians diabetes dataset with interaction and quadratic terms (n = 768, 45 predictors, binary outcome). 
+Performance metrics of interest (accuracy, precision, recall, and f1 score) were collected for analysis and hypothesis testing by paired t-tests. Two evaluations were performed for each classifier with the three dataset: from a single training-testing split (table 1), and from 5-fold cross-validation (table 2 and fig. 1).
+
+In terms of dataset-specific performance, both classifiers achieved near-perfect accuracy on the cancer data (except SVM on the single test/train split), had good performance on the diabetes data (~0.8), and struggled with the abalone data (~0.55; tables 1 & 2).
+In evaluations with a single test-train split, both algorithms had similar performance with the various datasets except was on the cancer dataset, where logistic regression performed better in terms of recall (table 1).
+
+---
+
+```{r table1}
+test_train_df %>% 
+  pander::pander(caption = "Performance estimates of logistic regression and support vector machines classifiers on the Abablone, Cancer, and Diabetes sets from a single train-test split.")
+```
+
+\newpage
+
+
+```{r plot1, fig.height=4, fig.width=5, fig.cap="Performance metrics (accuracy, f1, precision, and recall) in 5-fold cross-validation of logistic regression and support vector classifiers for Abalone, Cancer, and Diabetes datasets. Means +/- sd are shown as black point and errorbars, with individual observations are shown as grey circles. Note that different scales are used for each dataset."}
+
+plot1
+```
 
 ----
 
-```{r table1}
-# none are significant
-pairs_df %>%
-  select(data, metric, contains('LogReg'), contains('SVC'), p_value) %>%
-  mutate(across(where(is.numeric), ~ round(.x, 2))) %>% 
-  mutate(`Logistic Regression` = glue("{mean_LogReg} ({sd_LogReg})"),
-         SVM = glue("{mean_SVC} ({sd_SVC})")) %>% 
-  select(-contains("mean"), -contains("sd")) %>% 
-  rename(Dataset = data, Metric = metric) %>% 
-  relocate(p_value,.after = everything()) %>% 
-  pander::pander(caption = "Estimates of performance from 5-fold cross-validation of logistic regression and SVM classifiers applied to 3 datasets. Data are expressed as 'means (standard deviation)'")
+In evaluation by 5-fold cross-validation, I found that the support vector machine classifiers performed slightly better across datasets and metrics than the logistic regression classifier (with the exception of recall for the cancer data), however these differences only were significant at the $\alpha = 0.05$ level for the abalone dataset metrics (all four) and for precision on the diabetes data, according to paired t-tests (fig. 1, table 1). 
+Perhaps if 10-fold cross validation were performed, the sample size would allow for lower-error estimates of performance, though the cancer dataset has only a few observations, making 10-fold cross-validation unfeasible.
+
+Interestingly, the model hyperparameters selected through grid-search cross-validation often varied between folds of a given dataset (see end of document for list). For the abalone data, the best SVM classifiers always used the radial basis kernel, suggesting that the problem cannot be solved linearly (eg. by logistic regression). With the cancer and diabetes datasets, the best SVM classifiers always used the linear kernel with the smallest regularization penalty ($C = 1$), suggesting that these problems are more easily solved in linear space. 
+The best logistic regression classifiers used the l1 regularization for the diabetes data but a mix of l1 and l2 tunings were selected with cancer and abalone data. The logistic regression penalty parameter varied between nearly all folds, but usually not by a large amount. As such, it is difficult to draw any clear conclusions from the optimal logistic regression tunings. Perhaps in some cases the l2 regularization performs better because of the variable selection process inherent to the method; this would make sense for the cancer data, where low importance PC's may not provide useful information. 
+
+\newpage
+
+```{r table2}
+table2 %>% 
+  kableExtra::kable(
+    caption = "Estimates of performance from 5-fold cross-validation of logistic regression and SVM classifiers applied to 3 datasets. Data are expressed as 'means (standard deviation)'",
+    format = 'simple'
+  )
 ```
+
+\newpage
+
+#### Model hyperparameters selected in evaluations
+
+```
+Abalone test train
+-----------------
+Logistic Regression: 'C': 0.0695, 'penalty': 'l1'
+SVN: 'C': 10, 'gamma': 0.3, 'kernel': 'rbf'
+
+Abalone 5 fold:
+-----------------
+Logistic Regression: 'C': 4.83, 'penalty': 'l2' (x 2)
+Logistic Regression: 'C': 0.021, 'penalty': 'l2'
+Logistic Regression: 'C': 1.438, 'penalty': 'l1' 
+Logistic Regression: 'C': 0.038, 'penalty': 'l1'
+SVN: 'C': 10, 'gamma': 0.3, 'kernel': 'rbf' (x 4)
+SVN: 'C':  1, 'gamma': 0.1, 'kernel': 'rbf'
+
+Cancer test train
+-------------------
+Logistic Regression: 'C': 0.0207, 'penalty': 'l2'
+SVN: 'C': 1, 'kernel': 'linear'
+
+Cancer 5 fold:
+-------------------
+ Logistic Regression: 'C': 4.833, 'penalty': 'l2'
+ Logistic Regression: 'C': 0.0018, 'penalty': 'l2'
+ Logistic Regression: 'C': 0.0036, 'penalty': 'l2'
+ Logistic Regression: 'C': 100.0, 'penalty': 'l1'
+ Logistic Regression: 'C': 0.001, 'penalty': 'l2'
+ SVN: 'C': 1, 'kernel': 'linear' (all 5)
+
+Diabetes test-train
+-------------------
+Logistic Regression: 'C': 0.785, 'penalty': 'l1'
+SVN: 'C': 1, 'kernel': 'linear'
+
+Diabetes 5 fold:
+-------------------
+Logistic Regression: all l1 penalty, variable C (0.2-2.63)
+SVN: 'C': 1, 'kernel': 'linear' (all 5)
+```
+
+
+
+

@@ -12,9 +12,11 @@ set -u
 set -o pipefail
 set -x 
 
+# set random seed everywhere for consistent results (-s 9)
+
 # split the cancer data
 python tools/create_test_train_split.py \
-        --tag "cancer" -l "cancer" -s 5 \
+        --tag "cancer" -l "cancer" -s 9 \
         data-cancer-by-gene-expression/cancer-by-gene-expression.csv
 
 # calculate the projection for this split
@@ -22,8 +24,8 @@ python tools/calculate_data_projection.py \
 		--PCA --fig "cancer-train-vs-test"
 
 # run SVN on the pca'd data
-python tools/evaluate_svn.py --fig -s 5 "cancer-train-vs-test"
+python tools/evaluate_svn.py --fig -s 9 "cancer-train-vs-test"
 
 # run Logistic Regression on the datea
-python tools/evaluate_logisticreg.py --fig -s 5 "cancer-train-vs-test"
+python tools/evaluate_logisticreg.py --fig -s 9 "cancer-train-vs-test"
 

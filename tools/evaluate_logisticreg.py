@@ -142,8 +142,8 @@ print('Log. reg. Performance metrics:  accuracy %.2f, precision %.2f, recall %.2
 
 performance = pd.DataFrame()
 performance['algortithm'] = ['Logistic regression']
-performance['precision'] = [prediction_precision]
 performance['accuracy'] = [prediction_accuracy]
+performance['precision'] = [prediction_precision]
 performance['recall'] = [prediction_recall]
 performance['fmeasure'] = [prediction_fmeasure]
 performance.to_csv('%s/logreg_performance.csv' % DATA_DIRNAME, header=False, index=False)

@@ -24,3 +24,6 @@ python tools/calculate_data_projection.py  "abalone-train-vs-test"
 # run SVN on the datea
 python tools/evaluate_svn.py --fig -s 9 "abalone-train-vs-test"
 
+# run Log. Reg. on the datea
+python tools/evaluate_logisticreg.py --fig -s 9 "abalone-train-vs-test"
+

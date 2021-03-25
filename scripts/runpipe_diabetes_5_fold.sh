@@ -26,16 +26,3 @@ do
     python tools/evaluate_svn.py --fig -s 9 "diabetes-folded-${fold}"
 done
 
-# 
-# for fold in 00 01 02 03 04
-# do
-#     echo " = Fold ${fold}"
-#     # run SVN on the fold
-#     python tools/evaluate_svn_NO_PCA.py --fig "diabetes-folded-${fold}"
-# 
-#     # run LogReg on the fold
-#     python tools/evaluate_logreg_NO_PCA.py  --fig  "diabetes-folded-${fold}"
-#     
-#     # leave two blank lines between folds
-#     echo "\n"
-# done
