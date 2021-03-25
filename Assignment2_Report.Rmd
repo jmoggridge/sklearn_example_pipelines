@@ -110,6 +110,25 @@ ggplot() +
 ```
 
 
+```{r}
+# test-train results
+clnames <- c("Classifier","Accuracy", "Precision", "Recall", "F1") 
+test_train_df <- bind_rows(
+  read_csv('./cancer-train-vs-test/logreg_performance.csv',
+           col_names = clnames) %>%
+    mutate(data = "Cancer"),
+  read_csv('./cancer-train-vs-test/svn_performance.csv', 
+           col_names = clnames) %>%
+    mutate(data = "Cancer"),
+  read_csv('./abalone-train-vs-test/logreg_performance.csv',
+           col_names = clnames) %>%
+    mutate(data = "Abalone"),
+  read_csv('./abalone-train-vs-test/svn_performance.csv', 
+           col_names = clnames) %>%
+    mutate(data = "Abalone")
+  )
+
+```
 
 
 
