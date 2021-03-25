@@ -141,7 +141,7 @@ print('Log. reg. Performance metrics:  accuracy %.2f, precision %.2f, recall %.2
         % (prediction_accuracy, prediction_precision, prediction_recall, prediction_fmeasure))
 
 performance = pd.DataFrame()
-performance['algortithm'] = ['SVC']
+performance['algortithm'] = ['Logistic regression']
 performance['precision'] = [prediction_precision]
 performance['accuracy'] = [prediction_accuracy]
 performance['recall'] = [prediction_recall]

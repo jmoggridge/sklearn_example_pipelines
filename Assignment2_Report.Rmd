@@ -1,0 +1,102 @@
+---
+title: "Assignment2_report"
+author: "J Moggridge"
+date: "25/03/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(ggbeeswarm)
+
+# combine all data to work with
+df <- 
+  bind_rows(
+    read_csv("./results/kfold_abalone.csv", skip = 1L) %>% 
+      mutate(data = "Abalone"),
+    read_csv("./results/kfold_cancer.csv") %>% 
+      mutate(data = "Cancer"),
+    read_csv("./results/kfold_diabetes.csv") %>% 
+      mutate(data = "Diabetes")
+  ) %>%
+  mutate(algorithm = ifelse(algorithm == "Logistic regression", 
+                            "LogReg", algorithm)) %>% 
+  pivot_longer(precision:f1, 
+               names_to = 'metric', 
+               values_to = 'value')
+```
+
+
+```{r}
+# compute performance metric means for each (algorithm, dataset) pair
+summary_df <- df %>% 
+  group_by(algorithm, data, metric) %>% 
+  summarize(values = list(value),
+            mean = mean(value), 
+            sd = sd(value))
+# view(summary_df)
+
+paired_t_test <- function(x,y) 
+  t.test(as.vector(x), as.vector(y), paired=T)
+
+# pivot data such that each row has (data, metric, values_SVC, values_LogReg)
+pairs_df <- summary_df %>% 
+  mutate(id = row_number()) %>% 
+  pivot_wider(id_cols = c(data, metric), 
+              names_from = algorithm, 
+              values_from = c(values, mean, sd)) %>% 
+  # do a paired t-test for each dataset & metric
+  mutate(t_test = map2(values_LogReg, values_SVC, paired_t_test)) %>% 
+  mutate(p_value = map_dbl(t_test, "p.value"),
+         mean_diff = map_dbl(t_test, "estimate")) %>% 
+  select(everything(), t_test, -contains("values_"))
+```
+
+
+```{r}
+# none are significant
+pairs_df %>%
+  select(data, metric, contains('LogReg'), contains('SVC'), p_value) %>%
+  pander::pander()
+```
+
+
+```{r, fig.height=4, fig.width=5}
+
+ggplot() +
+ geom_quasirandom(
+   data=df, 
+   aes(x = algorithm, y = value), 
+   groupOnX = T,
+   width = 0.25, 
+   color = 'darkgray',
+   shape = 1,
+   alpha = 0.9,
+   method = 'quasirandom') +
+  geom_point(
+    data=summary_df, 
+    aes(x = algorithm, y = mean),
+    color = 'black', 
+    alpha = 0.45) +
+  geom_errorbar(
+    data=summary_df, 
+    aes(x = algorithm, ymin = mean-sd, ymax = mean+sd),
+    color = 'black', 
+    width = 0.25,
+    alpha = 0.45
+  ) +
+  facet_grid(data~metric, scales = 'free') +
+  labs(x="Classifier", y = NULL) +
+  theme_bw() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    )
+  
+```
+
