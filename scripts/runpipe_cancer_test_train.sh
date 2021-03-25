@@ -14,7 +14,7 @@ set -x
 
 # split the cancer data
 python tools/create_test_train_split.py \
-        --tag "cancer" -l "cancer" \
+        --tag "cancer" -l "cancer" -s 5 \
         data-cancer-by-gene-expression/cancer-by-gene-expression.csv
 
 # calculate the projection for this split
@@ -22,8 +22,8 @@ python tools/calculate_data_projection.py \
 		--PCA --fig "cancer-train-vs-test"
 
 # run SVN on the pca'd data
-python tools/evaluate_svn.py --fig "cancer-train-vs-test"
+python tools/evaluate_svn.py --fig -s 5 "cancer-train-vs-test"
 
 # run Logistic Regression on the datea
-python tools/evaluate_logisticreg.py --fig "cancer-train-vs-test"
+python tools/evaluate_logisticreg.py --fig -s 5 "cancer-train-vs-test"
 

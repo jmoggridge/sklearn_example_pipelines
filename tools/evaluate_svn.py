@@ -44,7 +44,7 @@ else:
     CLASS_NAMES = args.classes.split(',')
 ## set the seed if given for reproducible runs
 if args.seed is not None:
-    random.seed(argparse.seed)
+    random.seed(args.seed)
 
 MAKE_FIG=args.fig
 DATA_DIRNAME=args.dirname
@@ -125,12 +125,15 @@ print('SVN Performance metrics:  accuracy %.2f, precision %.2f, recall %.2f, f1 
         % (prediction_accuracy, prediction_precision, prediction_recall, prediction_fmeasure))
 
 performance = pd.DataFrame()
-performance['algortithm'] = 'SVC'
-performance['precision'] = prediction_precision
-performance['accuracy'] = prediction_accuracy
-performance['recall'] = prediction_recall
-performance['fmeasure'] = prediction_fmeasure
-performance.to_csv('%s/svn_outcome.csv' % DATA_DIRNAME, index=False)
+performance['algortithm'] = ['SVC']
+performance['precision'] = [prediction_precision]
+performance['accuracy'] = [prediction_accuracy]
+performance['recall'] = [prediction_recall]
+performance['fmeasure'] = [prediction_fmeasure]
+
+print(performance)
+
+performance.to_csv('%s/svn_performance.csv' % DATA_DIRNAME, header = False, index=False)
 
 outcome = pd.DataFrame()
 outcome['predicted'] = y_pred
@@ -141,10 +144,10 @@ outcome.to_csv('%s/svn_outcome.csv' % DATA_DIRNAME, index=False)
 cm = metrics.confusion_matrix(y_test, y_pred)
 confusion.print_confusion_matrix(cm, CLASS_NAMES, y_training)
 confusion.print_confusion_matrix(cm, CLASS_NAMES, y_training,
-		filename="%s/confusion.txt" % DATA_DIRNAME)
+		filename="%s/svn_confusion.txt" % DATA_DIRNAME)
 
 if MAKE_FIG:
 	confusion.confusion_matrix_heatmap(
-            '%s/confusion_heatmap.pdf' % DATA_DIRNAME,
+            '%s/svn_confusion_heatmap.pdf' % DATA_DIRNAME,
             cm, CLASS_NAMES, y_training)
         

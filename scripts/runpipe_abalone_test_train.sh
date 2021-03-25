@@ -15,14 +15,12 @@ set -o pipefail
 set -x 
 
 # split the data
-python tools/create_test_train_split.py \
-        --tag "abalone" -l "Sex" \
+python tools/create_test_train_split.py  --tag "abalone" -l "Sex" -s 9 \
         data-abalone-UCI/abalone.csv
 
 # calculate the projection for this split
-python tools/calculate_data_projection.py \
-		 "abalone-train-vs-test"
+python tools/calculate_data_projection.py  "abalone-train-vs-test"
 
 # run SVN on the datea
-python tools/evaluate_svn.py --fig "abalone-train-vs-test"
+python tools/evaluate_svn.py --fig -s 9 "abalone-train-vs-test"
 

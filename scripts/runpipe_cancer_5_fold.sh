@@ -16,7 +16,7 @@ set -x
 
 # create the "folds"
 python tools/create_folds.py \
-        --tag "cancer" -l "cancer" 5 \
+        --tag "cancer"  -s 9 -l "cancer" 5 \
         data-cancer-by-gene-expression/cancer-by-gene-expression.csv
 
 for fold in 00 01 02 03 04
@@ -30,10 +30,10 @@ do
             --PCA "cancer-folded-${fold}"
 
     # run SVN on the fold
-    python tools/evaluate_svn.py --fig "cancer-folded-${fold}"
+    python tools/evaluate_svn.py --fig -s 9 "cancer-folded-${fold}"
 
     # run LogReg on the fold
-    python tools/evaluate_logisticreg.py --fig "cancer-folded-${fold}"
+    python tools/evaluate_logisticreg.py --fig -s 9 "cancer-folded-${fold}"
     
     # leave two blank lines between folds
     echo "\n"

@@ -12,7 +12,7 @@ set -x
 
 
 # create the "folds"
-python tools/create_folds.py  --tag "diabetes" 5 data-diabetes/diabetes_extra.csv
+python tools/create_folds.py -s 9 --tag "diabetes" 5 data-diabetes/diabetes_extra.csv
 
 # for 5 folds: do projection, fit models + get metrics
 for fold in 00 01 02 03 04
@@ -21,9 +21,9 @@ do
     # calculate the projection for each fold
     python tools/calculate_data_projection.py "diabetes-folded-${fold}"
     # run logistic regression w multiclass, evaluate
-    python tools/evaluate_logisticreg.py --fig "diabetes-folded-${fold}"
+    python tools/evaluate_logisticreg.py --fig -s 9 "diabetes-folded-${fold}"
     # run SVN, evaluate
-    python tools/evaluate_svn.py --fig "diabetes-folded-${fold}"
+    python tools/evaluate_svn.py --fig -s 9 "diabetes-folded-${fold}"
 done
 
 # 
